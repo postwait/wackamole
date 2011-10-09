@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 1997 Theo Schlossnagle
+ */
 #include "ife.h"
 #include "arpcache.h"
 

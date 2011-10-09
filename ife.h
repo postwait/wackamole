@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 1997 Theo Schlossnagle
+ */
 #ifndef _IFE_H_
 #define _IFE_H_
 

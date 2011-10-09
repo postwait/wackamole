@@ -1,4 +1,5 @@
 /* ======================================================================
+ * Copyright (c) 1997 Theo Schlossnagle
  * Copyright (c) 1998-1999 The Johns Hopkins University.
  * All rights reserved.
  * The following code was written for use in the Backhand project at

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 1997 Theo Schlossnagle
+ */
+
 #ifndef IFE_ICMP_CHECKSUM_H
 #define IFE_ICMP_CHECKSUM_H
 
