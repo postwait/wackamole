@@ -1,0 +1,102 @@
+/==============================================================================\
+| The Wackamole Program.                                                       |
+| Copyright (c) 2000-2001 The Johns Hopkins University                         |
+| All rights reserved.                                                         |
+|                                                                              |
+| Wackamole is developed at the Center for Networking and Distributed Systems, |
+| The Johns Hopkins University.                                                |
+|                                                                              |
+| The Wackamole package is licensed under the CNDS Open Source License         |
+| You may only use this software in compliance with the License.               |
+| A copy of the license can be found at                                        |
+| http://www.backhand.org/wackamole/license                                    |
+|                                                                              |
+| Wackamole development was partially funded by a grant from the Defense       |
+| Advanced Research Projects Agency (DARPA) to Johns Hopkins University. The   |
+| U.S. Government retains certain rights in this software.                     |
+|                                                                              |
+| This product uses the Spread toolkit, developed by Spread Concepts LLC.      |
+| For more information about Spread see http://www.spread.org                  |
+|                                                                              |
+| This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF        |
+| ANY KIND, either express or implied.                                         |
+|                                                                              |
+| Creators:                                                                    |
+|    Yair Amir             yairamir@cnds.jhu.edu                               |
+|    Ryan Caudy            wyvern@cnds.jhu.edu                                 |
+|    Aashima Munjal        munjal@jhu.edu                                      |
+|    Theo Schlossnagle     jesus@cnds.jhu.edu                                  |
+|                                                                              |
+| For a full list of contributors, see Readme.txt in the distribution.         |
+|                                                                              |
+| WWW:     www.backhand.org     www.cnds.jhu.edu                               |
+| Contact: wackamole@backhand.org                                              |
+|                                                                              |
+| Version 1.2.0 Built 05/Nov/2001                                              |
+|                                                                              |
+\==============================================================================/
+
+OVERVIEW
+
+Wackamole
+
+Wackamole is an application that helps with making a cluster highly available. 
+It uses the membership notifications provided by the Spread toolkit to generate
+a consistent state that is agreed upon among all of the connected Wackamole 
+instances. Wackamole uses this knowledge to ensure that all of the public IP 
+addresses served by the cluster will be covered by exactly one Wackamole 
+instance.
+
+Wackamole works towards achieving a balanced distribution of the clusters IP 
+space between its instances.  First, each instance immediately claims its 
+preferred IP address. Then, if the number of virtual IP addresses acquired by 
+any two machines does differ by more than one, Wackamole will work towards 
+making the them differ by one or less. Wackamole has the ability to balance 
+all the IP addresses at once or do it gradually.
+
+
+
+SOURCE INSTALL
+
+You will need The Spread Tookit to build wackamole
+
+1) Download the Spread Toolkit from www.spread.org and install it.
+
+2) Either add the spread header files (found in the include directory
+   in the spread download) and libsp.a for your architecture to the 
+   wackamole directory, or pass CPPFLAGS and LDFLAGS to configure:
+
+     Assuming that your spread is installed somewhere odd like: /opt/spread
+
+	./configure --with-cppflags=-I/opt/spread/include \
+		--with-ldflags=-L/opt/spread/lib
+
+     Assuming that your spread is installed is /usr/local
+
+	./configure --with-cppflags=-I/usr/local/include \
+		--with-ldflags=-L/usr/local/lib
+
+3) Run ./configure with the appropriate parameters.
+
+4) Type "make all" and you should have a wackamole binary
+
+5) Type "make install" and it will install the distribution.
+
+Configuration
+ 
+You will need to have a valid configuration file for wackamole. Read 
+the sample wackamole.conf and create your own, or just modify it for 
+your cluster. You can use --sysconfdir=<path to wackamole.conf> as a
+paramater for ./configure to specify the path to the configuration file.
+
+To run wackamole, you will need to have a Spread deamon running. If the
+Spread deamon is not at its default port 4803, you will need to say 
+/path/to/wackamole -s <port number>
+
+
+Wackamole WILL ONLY run at "root" or superuser because it needs to aquire
+IP addresses.
+
+Nuber of virtual IPs that wackamole manages can be less than number of
+machines that wackamole manages if some machines have config vip 0.0.0.0
+

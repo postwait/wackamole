@@ -1,0 +1,109 @@
+August 8th, 2001 (08.08.2001) -- wackamole -- 1.0.0
+==========================================
+ * Added this ChangeLog file.
+ * Initial release.
+ * Now supports Linux platform.
+
+September 14th, 2001 (09.14.2001) -- wackamole -- 1.0.1
+==========================================
+ * Now brings down all its virtual interfaces when when it dies.
+ * Now tries to reconnect to spread if it looses connection.	
+
+November 5th, 2001 (11.01.2001) -- wackamole -- 1.2.0
+===========================================
+ * Added autoconf support (./configure)
+ * Now supports FreeBSD platform.
+ * Now supports Solaris 8 platform.
+ * Now supports MacOSX platform.
+ * Now daemonizes unless "-d" flag is given.
+ * Write a PID file now.
+ * Modified so that number of vitual ip's can be less than
+	number of machines if some machines have config vip 0.0.0.0
+ * Writes IP release/acquire information to syslog
+
+November 15th, 2002 (11.15.2002) -- wackamole -- 2.0.0
+===========================================
+ * Revamped configuration file completely.  New format described in sample.
+ * Allows/requires all interfaces to be named excplicitly to support machines
+	with multiple interface cards on different VLANs and/or subnets.
+ * Notifications are not to "a" router anymore.  An arbitrary list of CIDR form
+	addresses can be specified explicitly by interface.
+	All will receive ARP notifications of the MAC address change.
+ * ARP cache is collected (FreeBSD and Linux supported) and that pool can be
+	used as a notification destination for ARP updates.  (i.e. arp-spoof
+	everyone in my arp cache).  ARP caches are announced and merged, so
+	you wil hit every IP in the collective ARP cache of the cluster.
+ * Added multi-threaded updates.  Each VIP that is started will spawn an
+	arp-spoofing notification thread that will run through the list of
+	recipients.
+ * Allow for "no threading" via --with-threads=no configure option.
+ * Notifications can be throttled so that notifications to larger networks will
+	not cause ARP storms.  Notification lists are processed in a piecemeal
+	fashion such that large throttled notifications will not starve other
+        notifications.
+ * A unix domain control socket was added and a simple control procotol was
+	defined for out-of-band daemon control.
+ * A standalone control program was stubbed (wackatrl) that can instruct
+	the running wackamole instance to drop VIPs and disconnect from Spread.
+	This isn't the ideal method of releasing responsibility, but it is a
+	proof-of-concept.
+ * Made reconnections to spread more robust and configurable.
+ * Awful, awful, awful hack to fetch IPs from the system ARP cache on Solaris.
+ * The failure and success causes perpetual reconnect attempts.  These attempts
+	have been moved from their old blocking loop into the main loop.
+ * Arp Spoofing is now done using the Spread event system
+ * Now links correctly with Spread 3.17 (lib[t]spread.a) or 
+	older versions (lib[t]sp.a)
+
+July 28th, 2004 (07.28.2004) -- wackamole -- 2.1.0
+===========================================
+ * Allow for both non-threaded and threaded code.  Proper ifdefs.
+ * non-threaded by default, there are problems with the threads.
+ * RunDynamic directives to call loadable modules and embedder perl.
+ * Fixed rampant endian problems.
+ * Fixed CIDR form ranged arp notifications.
+ * Shared arp cache is now IP and MAC -- includes fixes to buffer overruns
+	triggered during collecting local ARP info on Solaris.
+ * When arp-spoofing to IPs in the shared arp cache, both broadcast and
+	directed ARP responses are done.
+ * Hack for Linux to post process the VIF table after a balance that performs
+	an if_down to make sure no other interfaces were casualties of that
+	operation.
+ * Added ping support so in addition to ARP spoofing, ICMP packets can be
+	sent.
+
+July 28th, 2004 (08.31.2004) -- wackamole -- 2.1.1
+===========================================
+ * No code changes.  Messed up distribution roll.  Fixed here.
+
+September 9th, 2004 (09.07.2004) -- wackamole -- 2.1.2
+===========================================
+ * Fixed Linux ping construction (compile error)
+ * Fixed double close in wackatrl
+ * Fixed argument parsing
+
+February 6th, 2007 (02.06.2007) -- wackamole -- 2.1.3
+===========================================
+ * Win32 support
+ * patch for perl up and down invocations from Glenn Nielsen < glenn at mail
+	dot more dot net >
+ * patch from < pete at more dot net > and < anderson at more dot net >
+	regarding uninitialized stack variable usable.  Fixes occasional
+	interface operations on FreeBSD.
+ * wrong string length of static strings, off-by-one. from Glenn Nielsen
+	< glenn at maildot more dot net >
+ * fork/setsid/fork now exits with 0 as it should
+ * memcpy argument fix in Solaris DLIP ife driver
+ * fixed Makefile to add LDFLAGS and LIBS for the arptest tool
+
+December 28th, 2007 (12.28.2007) -- wackamole -- 2.1.4
+===========================================
+ * Fix interfaces with numbers in them on Solaris (e1000g0)
+ * Get config.w32.h into the distribution (thanks Wez)
+
+                                 -- wackamole -- devel
+===========================================
+ * Warning and compile fixes on FreeBSD from Marcin Cieslak < saper at
+	saper dot info >
+ * Corrected 1.11 fix regarding interface instance numbers on Solaris from
+	< todd at messagesystems dot com >

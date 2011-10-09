@@ -1,0 +1,14 @@
+configure
+config.log
+config.cache
+Makefile
+config.status
+config.h
+lex.wack.c
+y.tab.c
+y.tab.h
+wackamole
+wackatrl
+*.exp
+*.lib
+autom4te.cache

@@ -1,0 +1,44 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH WACKATRL 8 "Arpirl 2004" Wackamole "User Manuals"
+.SH NAME
+wackatrl \- IP-failover high-availability controller
+.SH SYNOPSIS
+.BI "wackatrl [-c " config_file " ] [ -l | -f | -s ]
+.SH DESCRIPTION
+.B wackatrl
+runs the wackatrl IP-failover HA controller and instructs the currently
+running Wackamole instance to perform an action or display state information.
+.SH OPTIONS
+.IP "-c config-file"
+Use an alternate configuration file
+.I config-file
+instead of
+.IR wackamole.conf .
+.IP "-l"
+Lists the current state (ownership) of virtual interfaces.
+.IP "-f"
+Simulate a failure.  The local instance will disconnect from Spread and
+act as if it has failed by dropping its managed interfaces and running
+whatever dynamic calls have been configured.  A peer, should one exist,
+will assume the responsibility for the interfaces that were dropped.
+.IP "-s"
+Recover from a simulated failure.  This will tell the local instance to
+stop simulating failure.  The local instance will reconnect to Spread and
+once again participate in the peer-based HA environment.
+.SH FILES
+.I wackamole.conf
+.RS
+The default config file location is dependant on the install prefix. 
+.I ./wackamole.conf 
+is also searched if a local file is not found.
+.SH DIAGNOSTICS
+All error messages, should any be produced will be written to standard
+error.
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Theo Schlossnagle <jesus@cnds.jhu.edu>
+.SH "SEE ALSO"
+.BR wackamole (8), wackamole.conf (5)

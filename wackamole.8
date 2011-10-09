@@ -1,0 +1,65 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH WACKAMOLE 8 "Arpirl 2004" Wackamole "User Manuals"
+.SH NAME
+wackamole \- IP-failover high-availability tool
+.SH SYNOPSIS
+.BI "wackamole [-v] [-c " config_file " ] [ -s " spread " ] [-u " user " ] [ -d ]
+.SH DESCRIPTION
+.B wackamole
+runs the Wackamole IP-failover HA tool using the wackamole.conf file as a
+base configuration.
+.SH OPTIONS
+.IP "-v"
+Display version information and exit.
+.IP "-d"
+Turn on debugging and do not daemonize.
+.IP "-u user"
+Instruct wackamole to use
+.I user
+instread of
+.I Wack<pid>
+as it's username when connecting to Spread.
+.IP "-s spread_loc"
+Connect to Spread running at
+.I spread_loc
+.IP "-c config-file"
+Use an alternate configuration file
+.I config-file
+instead of
+.IR wackamole.conf .
+.SH FILES
+.I wackamole.conf
+.RS
+The default config file location is dependant on the install prefix. 
+.I ./wackamole.conf 
+is also searched if a local file is not found.
+.SH DIAGNOSTICS
+By default, Wackamole will log any errors to syslog.  Check the appropriate
+log desitnation on your platform.
+.SH BUGS
+.IP Linux
+Wackamole makes extensive use of ioctl()s on network devices.  When dropping
+and interface such as eth0:4, all subsequent interfaces (eth0:5, etc.) will
+.I disappear
+and no longer function.  There has been special code added that causes
+Wackamole on Linux to iterate through all IP addresses after a balancing round
+and attempt to re-plumb them.  This may cause gratuitous entries to syslog as
+well as extra unsolicited ARP responses.
+.IP Solaris
+Solaris' local arp-cache is, as far as the author is aware, completely
+undocumented.  The code in Wackamole to open /dev/ip and attempt to read the
+ARP cache was written only by looking at the output of
+.B truss arp -an
+and should be considered a "stab in the dark."
+.SH AUTHOR
+Yair Amir <yairamir@cnds.jhu.edu>
+
+Ryan Caudy <wyvern@cnds.jhu.edu>
+
+Aashima Munjal <munjal@cnds.jhu.edu>
+
+Theo Schlossnagle <jesus@cnds.jhu.edu>
+.SH "SEE ALSO"
+.BR wackamole.conf (5), wackatrl (1)

@@ -1,0 +1,221 @@
+.\"  -*- nroff -*-
+.\"
+.Dd April 23, 2004
+.Dt WACKAMOLE.CONF 5
+.Os
+.Sh NAME
+.Nm wackamole.conf
+.Nd Wackamole daemon configuration file
+.Sh SYNOPSIS
+.Bl -tag -width Ds -compact
+.It Pa wackamole.conf
+.El
+.Sh DESCRIPTION
+.Nm wackamole
+reads its configuration information from
+.Pa wackamole.conf
+(or the file specified with
+.Fl c
+on the command line).
+.Bl -tag -width Ds
+.It Cm Spread
+The spread daemon to which wackamole should connect.  Default value is
+.Dq 4803 .
+.It Cm SpreadRetryInterval
+The time interval between a failed attempt to connect to Spread and the next
+attempt.  Default
+.Dq 5s .
+.It Cm Group
+The Spread group overwhich all wackamole instances in the cluster will
+communicate.
+.It Cm Control
+The file (unix domain socket) on which wackamole will listen for and to which
+wackatrl will send out-of-band administrative commands.
+.It Cm AcquisitionsPerRound
+This is specified within a
+.Cm Balance
+stanza. This value informs wackamole of the maximum number
+of interfaces it will assume responsibility for in a single balancing roung.
+Possible values are non-negative integers and the keywork
+.Dq all .
+.It Cm Interval
+This is specified within a
+.Cm Balance
+stanza.  This value specifies how long each balancing round is to take.  The default is
+.Dq 4s .
+.Pp
+Sample
+.Cm Balance
+stanza:
+.Pp
+.Bd -literal -offset indent
+Balance {
+  AcquisitionsPerRound = all
+  interval = 4s
+}
+.Ed
+.It Cm Mature
+Desribing the time interval required before an new node becomes mature and can
+assume responsibilities.  The default value is
+.Dq 5s .
+.It Cm Arp-Cache
+This time interval is the interval at which wackamole will recollect local
+arp cache information and share it with its peers.  The default is
+.Dq 60s .
+.It Cm Prefer <IP>
+Tells wackamole that this IP address is preferred and that an attempt should
+be made to assume responsibility for the VIF headed by this IP.  Use of this
+option is discouraged as wackamole can typically make decisions all by its
+lonesome.
+.It Cm VirtualInterfaces
+This stanza describes the virtual interfaces (and the virtual IP addresses
+those interfaces contain) that wackamole will manage.  A virtual interface
+can be a single IP address of the form:
+.Pp
+.Bd -literal -offset indent
+int:IP/CIDR
+int:IP/CIDRnNET
+.Ed
+.Pp
+Interfaces may consist of multiple grouped IPs (that cannot be separated) by
+specifiying them in braces:
+.Pp
+.Pp
+.Bd -literal -offset indent
+{ int:IP/CIDR int:IP/CIDRnNET int:IP/CIDR }
+.Ed
+.Pp
+.Ar int
+in the syntax represents the physical interface on which the IP address will
+be managed (
+.Li e.g. fxp0, eth1, en0, hme0
+).
+.Ar IP
+is a standard form IPv4 address.
+.Ar CIDR
+is the numeric CIDR-form netmask (the number of set bits in the netmask).
+Note that many operating systems (
+.Tn FreeBSD ,
+.Tn Solaris ,
+.Tn Mac OS X )
+recommend that aliases be added with a netmask of
+.Li 0xffffffff
+and in these cases,
+.Li /32
+is the appropirate CIDR to use.
+.Ar NET
+provides a hint to wackamole as to the netspace in which the IP sits.  As
+the netmask directly on the interface is often
+.Li /32 ,
+it often does not illustrate that ARP spoofs can be sent to other IPs (as none
+lie in its directly attached netspace.
+.Ar NET
+is a way of effectively telling wackamole the directly attached IP network
+that ARP responses
+.Li could
+be sent to.  If
+.Ar NET
+is not specified, it is assumed to be a
+.Li n24 .
+.Pp
+With the exception of the interface name and perhaps the netmask, these
+stanzas must be
+.B IDENTICAL
+across all machines in the cluster.  Wackamole manages IP addresses by both
+index number and IP address, so it is fundamental that the lists look the same
+and be in the same order.
+.Pp
+Sample
+.Cm VirtualInterfaces
+stanza:
+.Pp
+.Bd -literal -offset indent
+VirtualInterfaces {
+    eth0:10.2.3.11/24
+    eth0:10.2.3.12/24
+    eth0:10.2.3.13/24
+    eth0:10.2.3.13/24
+    eth0:10.2.3.13/24
+}
+.Ed
+.Pp
+Sample multi-IP
+.Cm VirtualInterfaces
+stanza:
+.Pp
+.Bd -literal -offset indent
+VirtualInterfaces {
+    { fxp0:192.168.10.2/32n23 fxp1:192.0.2.2/32n29 }
+    { fxp0:192.168.10.3/32n23 fxp1:192.0.2.3/32n29 }
+}
+.Ed
+.El
+.Sh EXTENSIBILITY
+Wackamole allows for user-defined actions to occur when HA events occur.
+There are four types of events:
+.Bl -tag -width Ds
+.It Ar on up
+This occurs when a virtual interface is brought online.
+.It Ar on down
+This occurs when a virtual interface is brought offline.
+.It Ar post up
+This occurs after a balancing round during which one or more virtual
+interfaces where brought online.
+.It Ar post down
+This occurs after a balancing round during which one or more virtual
+interfaces where brought offline.
+.El
+.Pp
+Wackamole allows shared objects to loaded and executed during any of these
+events by specifying:
+.Pp
+.Li RunDynamic
+.Ar module:func
+.Ar event
+.Pp
+.Ar module
+is a shared object (or dyld bundle) that can be loaded using the operating
+systems dynamic run-time loader (dlopen or dyld).
+.Ar func
+is the name of the symbol to be referenced from that object and invoked.
+.Ar event
+is one of the four events listed above.
+.Pp
+Wackamole also has an optional embedded perl interpreter which allows modules
+written in perl to be loaded and executed.  Perl specific options are:
+.Bl -tag -width Ds
+.It Cm PerlUseLib
+Takes a directory as a parameter and is effectively the same as performing
+.Ar use lib
+within perl.
+.It Cm PerlUse
+Takes a module as a parameter and performs a
+.Ar use
+on it making it available for use within wackamole.
+.El
+.Pp
+The
+.Cm RunDynamic
+directive envokes perl methods if two colons (::) are used to seperate the
+.Ar module
+from the
+.Ar func .
+Sample execution of
+.Cm MyModule::DoMagic
+on a
+.Ar post up
+event:
+.Pp 
+.Bd -literal -offset indent
+PerlUseLib /opt/wackamole/site
+PerlUse MyModule
+RunDynamic MyModule::DoMagic post up
+.Ed
+.Sh AUTHORS
+Yair Amir <yairamir@cnds.jhu.edu>
+Ryan Caudy <wyvern@cnds.jhu.edu>
+Aashima Munjal <munjal@cnds.jhu.edu>
+Theo Schlossnagle <jesus@cnds.jhu.edu>
+.Sh "SEE ALSO"
+.Xr wackamole 8
+.Xr wackatrl 1

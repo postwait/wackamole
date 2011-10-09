@@ -1,0 +1,927 @@
+AC_INIT(wackamole.c)
+
+AC_CONFIG_HEADER(config.h)
+AC_PROG_CC
+AC_CANONICAL_HOST
+AC_C_BIGENDIAN
+
+# Checks for programs.
+AC_PROG_CPP
+AC_PROG_RANLIB
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_YACC
+AC_PROG_LEX
+if test "$LEX" != "flex" ; then
+	if test -f y.tab.h -a -f y.tab.c -a -f lex.wack.c ; then
+		AC_MSG_WARN([*** this program requires GNU flex, but it looks ***])
+		AC_MSG_WARN([*** like your parsers is already built ***])
+	else
+		AC_MSG_ERROR([*** this program requires GNU flex (not lex) ***])
+	fi
+fi
+
+AC_PATH_PROG(AR, ar)
+AC_PATH_PROGS(PERL, perl5 perl)
+AC_SUBST(PERL)
+
+if test -z "$AR" ; then
+	AC_MSG_ERROR([*** 'ar' missing, please install or fix your \$PATH ***])
+fi
+
+if test -z "$LD" ; then
+	LD=$CC
+fi
+AC_SUBST(LD)
+	
+# C Compiler features
+AC_C_INLINE
+if test "$GCC" = "yes"; then 
+	CFLAGS="$CFLAGS -Wall"
+fi
+
+# Allow user to specify flags
+AC_ARG_WITH(cflags,
+	[  --with-cflags           Specify additional flags to pass to compiler],
+	[
+		if test "x$withval" != "xno" ; then
+			CFLAGS="$CFLAGS $withval"
+		fi
+	]	
+)
+OCPPFLAGS="$CPPFLAGS"
+AC_ARG_WITH(cppflags,
+	[  --with-cppflags         Specify additional flags to pass to preprocessor] ,
+	[
+		if test "x$withval" != "xno"; then
+			CPPFLAGS="$CPPFLAGS $withval"
+		fi
+	]
+)
+if test "x$CPPFLAGS" = "x$OCPPFLAGS"; then
+	CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+fi
+
+OLDFLAGS=$LDFLAGS
+AC_ARG_WITH(ldflags,
+	[  --with-ldflags          Specify additional flags to pass to linker],
+	[
+		if test "x$withval" != "xno" ; then
+			LDFLAGS="$LDFLAGS $withval"
+		fi
+	]	
+)
+if test "x$LDFLAGS" = "x$OLDFLAGS"; then
+	LDFLAGS="$LDFLAGS -L/usr/local/lib"
+fi
+
+AC_ARG_WITH(libs,
+	[  --with-libs             Specify additional libraries to link with],
+	[
+		if test "x$withval" != "xno" ; then
+			LIBS="$LIBS $withval"
+		fi
+	]	
+)
+
+MANTYPE=man
+AC_ARG_WITH(catman,
+        [  --with-mantype=man|cat|doc  Set man page type],
+        [
+                case "$withval" in
+                man|cat|doc)
+                        MANTYPE=$withval
+                        ;;
+                *)
+                        AC_MSG_ERROR(invalid man type: $withval)
+                        ;;
+                esac
+        ]
+)
+if test -z "$MANTYPE"; then
+        AC_PATH_PROGS(NROFF, nroff awf, /bin/false, /usr/bin:/usr/ucb)
+        if ${NROFF} -mdoc ${srcdir}/wackamole.8 >/dev/null 2>&1; then
+                MANTYPE=doc
+        elif ${NROFF} -man ${srcdir}/wackamole.8 >/dev/null 2>&1; then
+                MANTYPE=man
+        else
+                MANTYPE=cat
+        fi
+fi
+AC_SUBST(MANTYPE)
+if test "$MANTYPE" = "doc"; then
+        mansubdir=man;
+else
+        mansubdir=$MANTYPE;
+fi
+AC_SUBST(mansubdir)
+
+EC_USE_THREADS=-1
+
+EMBED_PERL="no"
+AC_ARG_WITH(perl,
+	[  --with-perl                Embed a perl interpreter],
+	[
+		if test "x$withval" != "xno" ; then
+			PERLOBJS="perl.o perlxsi.o"
+                        CFLAGS="$CFLAGS "`perl -MExtUtils::Embed -e ccopts`
+                        LDFLAGS="$LDFLAGS "`perl -MExtUtils::Embed -e ldopts`
+                        AC_DEFINE(USE_EMBEDDED_PERL)
+                        EMBED_PERL="yes"
+		fi
+	]	
+)
+AC_SUBST(PERLOBJS)
+AC_ARG_WITH(threads,
+	[  --with-threads             Specify to use threads -- default (=no to override)],
+	[
+		if test "x$withval" = "xyes" ; then
+			EC_USE_THREADS=0
+		fi
+	]	
+)
+
+if test $EC_USE_THREADS = -1; then
+    CPPFLAGS="$CPPFLAGS -DDONT_USE_THREADS"
+else
+ dnl If all other thread tests fail, try BSD's -pthread
+ if test $EC_USE_THREADS = 0; then
+    SAVEOLDLIBS=$LIBS
+    AC_CHECK_LIB(c_r, pthread_create)
+    if test $ac_cv_lib_c_r_pthread_create = yes; then
+      LDFLAGS="$LDFLAGS -pthread"
+      CFLAGS="$CFLAGS -pthread"
+      EC_USE_THREADS=1
+    fi
+    LIBS=$SAVEOLDLIBS
+ fi
+
+ if test $EC_USE_THREADS = 0; then
+  AC_CHECK_LIB(cma, pthread_create)
+  if test $ac_cv_lib_cma_pthread_create = yes; then
+   EC_USE_THREADS=1
+  fi
+
+ dnl special pthread handling 
+ dnl AIX uses pthreads instead of pthread, and HP/UX uses cma
+ dnl FreeBSD users -pthread
+ AC_CHECK_LIB(pthread, pthread_create)
+
+ if test $ac_cv_lib_pthread_pthread_create = yes; then
+  EC_USE_THREADS=1
+ else
+   dnl For HP 11
+   AC_CHECK_LIB(pthread, pthread_mutex_init)
+   if test $ac_cv_lib_pthread_pthread_mutex_init = yes; then
+     EC_USE_THREADS=1
+   fi
+ fi
+
+
+ if test $EC_USE_THREADS = 0; then
+  AC_CHECK_LIB(pthreads, pthread_create)
+  if test $ac_cv_lib_pthreads_pthread_create = yes; then
+   EC_USE_THREADS=1
+  fi
+ fi
+
+ if test $EC_USE_THREADS = 0; then
+ AC_CHECK_LIB(cma, pthread_create)
+  if test $ac_cv_lib_cma_pthread_create = yes; then
+   EC_USE_THREADS=1
+  fi
+ fi
+fi
+ AC_CHECK_FUNC(pthread_mutex_lock)
+
+ if test $ac_cv_func_pthread_mutex_lock = yes; then
+   EC_USE_THREADS=1
+ fi
+AC_CHECK_HEADERS(pthread.h)
+AC_CHECK_LIB(thread, thr_create, , )
+AC_CHECK_LIB(posix4, sem_wait, , )
+fi
+AC_SUBST(EC_USE_THREADS)
+
+AC_CHECK_LIB(nsl, gethostbyaddr, , )
+AC_CHECK_LIB(socket, socket, , )
+AC_CHECK_LIB(dl, dlopen, , )
+SPREAD="0"
+if test $EC_USE_THREADS = 1; then
+    CFLAGS="$CFLAGS -D_REENTRANT"
+    AC_CHECK_LIB(tsp, SP_connect, SPREAD=2)
+    AC_CHECK_LIB(tspread, SP_connect, SPREAD=1)
+dnl	AC_MSG_ERROR([ *** wackamole requires Spread *** ]) )
+else
+    AC_CHECK_LIB(sp, SP_connect,SPREAD=2)
+    AC_CHECK_LIB(spread, SP_connect,SPREAD=1)
+fi
+if test $SPREAD = 0; then
+    AC_MSG_ERROR([ *** wackamole requires Spread *** ]) 
+fi
+if test $SPREAD = 1; then
+    if test $EC_USE_THREADS = 1; then
+         LIBS="$LIBS -ltspread"
+    else 
+         LIBS="$LIBS -lspread"
+    fi
+fi
+if test $SPREAD = 2; then
+    if test $EC_USE_THREADS = 1; then
+    	LIBS="$LIBS -ltsp"
+    else 
+    	LIBS="$LIBS -lsp"
+    fi
+fi
+
+AC_FUNC_STRFTIME
+
+# Checks for header files.
+AC_CHECK_HEADERS(sys/types.h sys/socket.h netinet/in.h netinet/in_systm.h)
+AC_CHECK_HEADERS(features.h pcap.h net/ethernet.h netinet/if_ether.h net/if_dl.h net/if.h net/if_types.h net/route.h sys/ioctl.h arpa/inet.h assert.h errno.h grp.h limits.h sys/resource.h netdb.h netinet/tcp.h pwd.h signal.h stdarg.h stdint.h stdio.h stdlib.h string.h ctype.h stropts.h sys/inttypes.h sys/ioctl.h sys/param.h sys/stat.h sys/time.h sys/timeb.h sys/wait.h sys/uio.h sys/un.h sys/sysctl.h time.h unistd.h dlfcn.h strings.h sys/sockio.h sys/dlpi.h net/bpf.h sys/filio.h syslog.h netinet/ip.h termios.h fcntl.h, [], [], [
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_IN_SYSTM_H
+#include <netinet/in_systm.h>
+#endif HAVE_NETINET_IN_SYSTM_H
+])
+
+AC_CHECK_HEADER(sp.h,
+        [
+                AC_DEFINE(HAVE_SP_H,1,[Defines if your system have the sp.h header file])
+        ],
+        [
+                AC_MSG_ERROR([****** sp.h could not be found.  Perhaps it is isn't installed or installed somewhere odd.])
+	]
+	)
+
+dnl    Checks for library functions.
+AC_CHECK_FUNCS(bcopy inet_aton inet_ntoa inet_ntop memmove setsid snprintf strerror lrand48)
+dnl    Checks for time functions
+AC_CHECK_FUNCS(gettimeofday time)
+
+# Check for broken snprintf
+if test "x$ac_cv_func_snprintf" = "xyes" ; then
+	AC_MSG_CHECKING([whether snprintf correctly terminates long strings])
+	AC_TRY_RUN(
+		[
+#include <stdio.h>
+int main(void){char b[5];snprintf(b,5,"123456789");return(b[4]!='\0');}
+		],
+		[AC_MSG_RESULT(yes)], 
+		[
+			AC_MSG_RESULT(no)
+			AC_DEFINE(BROKEN_SNPRINTF)
+			AC_MSG_WARN([****** Your snprintf() function is broken, complain to your vendor])
+		]
+	)
+fi
+
+# Checks for data types
+AC_CHECK_SIZEOF(char, 1)
+AC_CHECK_SIZEOF(short int, 2)
+AC_CHECK_SIZEOF(int, 4)
+AC_CHECK_SIZEOF(long int, 4)
+AC_CHECK_SIZEOF(long long int, 8)
+
+AC_CACHE_CHECK([for struct timezone type], ac_cv_have_struct_timezone, [
+	AC_TRY_COMPILE(
+		[ #include <time.h>
+		  #include <sys/types.h> ], 
+		[ struct timezone opt; ],
+		[ ac_cv_have_struct_timezone="yes" ],
+		[ ac_cv_have_struct_timezone="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_timezone" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_TIMEZONE)
+fi
+
+AC_CACHE_CHECK([for struct sockopt_len_t type], ac_cv_have_sockopt_len_t, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h>
+		  #include <sys/socket.h> ], 
+		[ static sockopt_len_t opt; opt=0; ],
+		[ ac_cv_have_sockopt_len_t="yes" ],
+		[ ac_cv_have_sockopt_len_t="no" ]
+	)
+])
+if test "x$ac_cv_have_sockopt_len_t" = "xyes" ; then
+	AC_DEFINE(HAVE_SOCKOPT_LEN_T)
+fi
+
+if test "x$IFE_OBJ" = "x" ; then
+  AC_CACHE_CHECK([for SOCK_PACKET], ac_cv_have_sock_packet, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h>
+		  #include <sys/socket.h> ], 
+		[ SOCK_PACKET; ],
+		[ ac_cv_have_sock_packet="yes" ],
+		[ ac_cv_have_sock_packet="no" ]
+	)
+  ])
+  if test "x$ac_cv_have_sock_packet" = "xyes" ; then
+	AC_DEFINE(USE_SOCK_PACKET)
+        IFE_OBJ="ife-sockpacket.o"
+  fi
+fi
+
+AC_MSG_CHECKING([for Linux's /proc/net/arp])
+  if test -f "/proc/net/arp"; then
+    AC_DEFINE(HAVE_PROC_NET_ARP)
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
+
+if test "x$IFE_OBJ" = "x" ; then
+  AC_MSG_CHECKING([for BPF])
+  if test -c "/dev/bpf0" ; then
+	AC_MSG_RESULT(yes)
+        AC_CHECK_LIB(pcap, pcap_strerror, ,
+		AC_MSG_ERROR([ *** Need libpcap for BPF ***]))
+	AC_DEFINE(USE_BPF)
+        IFE_OBJ="ife-bpf.o"
+  else
+	AC_MSG_RESULT(no)
+  fi
+fi
+if test "x$IFE_OBJ" = "x" ; then
+  AC_MSG_CHECKING([for DLPI])
+  if test "x$ac_cv_header_sys_dlpi_h" = "xyes" ; then
+	AC_DEFINE(USE_DLPI)
+	AC_MSG_RESULT(yes)
+        IFE_OBJ="ife-dlpi.o"
+  else
+	AC_MSG_RESULT(no)
+  fi
+fi
+
+if test "x$IFE_OBJ" = "x" ; then
+  AC_MSG_ERROR([ *** Don't know how to work with interfaces on your system *** ])
+fi
+
+AC_CACHE_CHECK([for struct msghdr type], ac_cv_have_struct_msghdr, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h>
+		  #include <sys/socket.h> ], 
+		[ static  struct  msghdr msg; msg.msg_namelen = 1; ], 
+		[ ac_cv_have_struct_msghdr="yes" ],
+		[ ac_cv_have_struct_msghdr="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_msghdr" = "xno" ; then
+	AC_DEFINE(ARCH_SCATTER_NONE)
+else
+  have_scatter="no"
+  AC_CACHE_CHECK([for struct msghdr control], ac_cv_have_struct_msghdr_ctl, [
+        AC_TRY_COMPILE(
+                [ #include <sys/types.h>
+		  #include <sys/socket.h> ],
+                [ static  struct  msghdr msg; msg.msg_controllen = 0; ],
+                [ ac_cv_have_struct_msghdr_ctl="yes" ],
+                [ ac_cv_have_struct_msghdr_ctl="no" ]
+        )
+  ])
+  if test "x$ac_cv_have_struct_msghdr_ctl" = "xyes" ; then
+	AC_DEFINE(ARCH_SCATTER_CONTROL)
+	have_scatter="yes"
+  fi
+  AC_CACHE_CHECK([for struct msghdr accrights], ac_cv_have_struct_msghdr_acc, [
+        AC_TRY_COMPILE(
+                [ #include <sys/types.h>
+		  #include <sys/socket.h> ],
+                [ static  struct  msghdr msg; msg.msg_accrightslen = 0; ],
+                [ ac_cv_have_struct_msghdr_acc="yes" ],
+                [ ac_cv_have_struct_msghdr_acc="no" ]
+        )
+  ])
+  if test "x$ac_cv_have_struct_msghdr_acc" = "xyes" ; then
+	AC_DEFINE(ARCH_SCATTER_ACCRIGHTS)
+	have_scatter="yes"
+  fi
+  if test "x$have_scatter" = "xno" ; then
+        AC_MSG_ERROR([*** cannot determine which scatter type to use ***])
+  fi
+fi
+
+AC_CACHE_CHECK([for u_int type], ac_cv_have_u_int, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h> ], 
+		[ u_int a; a = 1;], 
+		[ ac_cv_have_u_int="yes" ],
+		[ ac_cv_have_u_int="no" ]
+	)
+])
+if test "x$ac_cv_have_u_int" = "xyes" ; then
+	AC_DEFINE(HAVE_U_INT)
+	have_u_int=1
+fi
+
+AC_CACHE_CHECK([for intXX_t types], ac_cv_have_intxx_t, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h> ], 
+		[ int8_t a; int16_t b; int32_t c; a = b = c = 1;], 
+		[ ac_cv_have_intxx_t="yes" ],
+		[ ac_cv_have_intxx_t="no" ]
+	)
+])
+if test "x$ac_cv_have_intxx_t" = "xyes" ; then
+	AC_DEFINE(HAVE_INTXX_T)
+	have_intxx_t=1
+fi
+	
+AC_CACHE_CHECK([for int64_t type], ac_cv_have_int64_t, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h> ], 
+		[ int64_t a; a = 1;], 
+		[ ac_cv_have_int64_t="yes" ],
+		[ ac_cv_have_int64_t="no" ]
+	)
+])
+if test "x$ac_cv_have_int64_t" = "xyes" ; then
+	AC_DEFINE(HAVE_INT64_T)
+	have_int64_t=1
+fi
+	
+AC_CACHE_CHECK([for u_intXX_t types], ac_cv_have_u_intxx_t, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h> ], 
+		[ u_int8_t a; u_int16_t b; u_int32_t c; a = b = c = 1;], 
+		[ ac_cv_have_u_intxx_t="yes" ],
+		[ ac_cv_have_u_intxx_t="no" ]
+	)
+])
+if test "x$ac_cv_have_u_intxx_t" = "xyes" ; then
+	AC_DEFINE(HAVE_U_INTXX_T)
+	have_u_intxx_t=1
+fi
+
+AC_CACHE_CHECK([for u_int64_t types], ac_cv_have_u_int64_t, [
+	AC_TRY_COMPILE(
+		[ #include <sys/types.h> ], 
+		[ u_int64_t a; a = 1;], 
+		[ ac_cv_have_u_int64_t="yes" ],
+		[ ac_cv_have_u_int64_t="no" ]
+	)
+])
+if test "x$ac_cv_have_u_int64_t" = "xyes" ; then
+	AC_DEFINE(HAVE_U_INT64_T)
+	have_u_int64_t=1
+fi
+
+if (test -z "$have_u_intxx_t" || test -z "$have_intxx_t" && \
+           test "x$ac_cv_header_sys_bitypes_h" = "xyes")
+then
+	AC_MSG_CHECKING([for intXX_t and u_intXX_t types in sys/bitypes.h])
+	AC_TRY_COMPILE(
+		[
+#include <sys/bitypes.h>
+		], 
+		[
+			int8_t a; int16_t b; int32_t c;
+			u_int8_t e; u_int16_t f; u_int32_t g;
+			a = b = c = e = f = g = 1;
+		], 
+		[
+			AC_DEFINE(HAVE_U_INTXX_T)
+			AC_DEFINE(HAVE_INTXX_T)
+			AC_MSG_RESULT(yes)
+		],
+		[AC_MSG_RESULT(no)]
+	) 
+fi
+
+if test -z "$have_u_intxx_t" ; then
+	AC_CACHE_CHECK([for uintXX_t types], ac_cv_have_uintxx_t, [
+		AC_TRY_COMPILE(
+			[
+#include <sys/types.h>
+			], 
+			[ uint8_t a; uint16_t b; uint32_t c; a = b = c = 1; ], 
+			[ ac_cv_have_uintxx_t="yes" ],
+			[ ac_cv_have_uintxx_t="no" ]
+		)
+	])
+	if test "x$ac_cv_have_uintxx_t" = "xyes" ; then
+		AC_DEFINE(HAVE_UINTXX_T)
+	fi
+fi
+
+AC_CACHE_CHECK([for socklen_t], ac_cv_have_socklen_t, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[socklen_t foo; foo = 1235;],
+		[ ac_cv_have_socklen_t="yes" ],
+		[ ac_cv_have_socklen_t="no" ]
+	)
+])
+if test "x$ac_cv_have_socklen_t" = "xyes" ; then
+	AC_DEFINE(HAVE_SOCKLEN_T)
+fi
+
+AC_CACHE_CHECK([for size_t], ac_cv_have_size_t, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+		],
+		[ size_t foo; foo = 1235; ],
+		[ ac_cv_have_size_t="yes" ],
+		[ ac_cv_have_size_t="no" ]
+	)
+])
+if test "x$ac_cv_have_size_t" = "xyes" ; then
+	AC_DEFINE(HAVE_SIZE_T)
+fi
+
+AC_CACHE_CHECK([for ssize_t], ac_cv_have_ssize_t, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+		],
+		[ ssize_t foo; foo = 1235; ],
+		[ ac_cv_have_ssize_t="yes" ],
+		[ ac_cv_have_ssize_t="no" ]
+	)
+])
+if test "x$ac_cv_have_ssize_t" = "xyes" ; then
+	AC_DEFINE(HAVE_SSIZE_T)
+fi
+
+AC_CACHE_CHECK([for clock_t], ac_cv_have_clock_t, [
+	AC_TRY_COMPILE(
+		[
+#include <time.h>
+		],
+		[ clock_t foo; foo = 1235; ],
+		[ ac_cv_have_clock_t="yes" ],
+		[ ac_cv_have_clock_t="no" ]
+	)
+])
+if test "x$ac_cv_have_clock_t" = "xyes" ; then
+	AC_DEFINE(HAVE_CLOCK_T)
+fi
+
+AC_CACHE_CHECK([for sa_family_t], ac_cv_have_sa_family_t, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[ sa_family_t foo; foo = 1235; ],
+		[ ac_cv_have_sa_family_t="yes" ],
+		[ AC_TRY_COMPILE(
+		  [
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+		],
+		[ sa_family_t foo; foo = 1235; ],
+		[ ac_cv_have_sa_family_t="yes" ],
+
+		[ ac_cv_have_sa_family_t="no" ]
+	)]
+	)
+])
+if test "x$ac_cv_have_sa_family_t" = "xyes" ; then
+	AC_DEFINE(HAVE_SA_FAMILY_T)
+fi
+
+
+AC_CACHE_CHECK([for struct sockaddr_storage], ac_cv_have_struct_sockaddr_storage, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[ struct sockaddr_storage s; ],
+		[ ac_cv_have_struct_sockaddr_storage="yes" ],
+		[ ac_cv_have_struct_sockaddr_storage="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_sockaddr_storage" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_SOCKADDR_STORAGE)
+fi
+
+AC_CACHE_CHECK([for struct sockaddr_in6], ac_cv_have_struct_sockaddr_in6, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <netinet/in.h>
+		],
+		[ struct sockaddr_in6 s; s.sin6_family = 0; ],
+		[ ac_cv_have_struct_sockaddr_in6="yes" ],
+		[ ac_cv_have_struct_sockaddr_in6="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_sockaddr_in6" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_SOCKADDR_IN6)
+fi
+
+AC_CACHE_CHECK([for struct in6_addr], ac_cv_have_struct_in6_addr, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <netinet/in.h>
+		],
+		[ struct in6_addr s; s.s6_addr[0] = 0; ],
+		[ ac_cv_have_struct_in6_addr="yes" ],
+		[ ac_cv_have_struct_in6_addr="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_in6_addr" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_IN6_ADDR)
+fi
+
+AC_CACHE_CHECK([for struct addrinfo], ac_cv_have_struct_addrinfo, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+		],
+		[ struct addrinfo s; s.ai_flags = AI_PASSIVE; ],
+		[ ac_cv_have_struct_addrinfo="yes" ],
+		[ ac_cv_have_struct_addrinfo="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_addrinfo" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_ADDRINFO)
+fi
+
+AC_CACHE_CHECK([for struct timeval], ac_cv_have_struct_timeval, [
+	AC_TRY_COMPILE(
+		[ #include <sys/time.h> ], 
+		[ struct timeval tv; tv.tv_sec = 1;], 
+		[ ac_cv_have_struct_timeval="yes" ],
+		[ ac_cv_have_struct_timeval="no" ]
+	)
+])
+if test "x$ac_cv_have_struct_timeval" = "xyes" ; then
+	AC_DEFINE(HAVE_STRUCT_TIMEVAL)
+	have_struct_timeval=1
+fi
+
+AC_CACHE_CHECK([for sun_len field in struct sockaddr_un],
+		ac_cv_have_sun_len_in_struct_sockaddr_un, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[ struct sockaddr_un s; s.sun_len = 1; ],
+		[ ac_cv_have_sun_len_in_struct_sockaddr_un="yes" ],
+		[ ac_cv_have_sun_len_in_struct_sockaddr_un="no" ],
+	)
+])
+if test "x$ac_cv_have_sun_len_in_struct_sockaddr_un" = "xyes" ; then
+	AC_DEFINE(HAVE_SUN_LEN_IN_SOCKADDR_UN)
+fi
+
+AC_CACHE_CHECK([for ss_family field in struct sockaddr_storage],
+		ac_cv_have_ss_family_in_struct_ss, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[ struct sockaddr_storage s; s.ss_family = 1; ],
+		[ ac_cv_have_ss_family_in_struct_ss="yes" ],
+		[ ac_cv_have_ss_family_in_struct_ss="no" ],
+	)
+])
+if test "x$ac_cv_have_ss_family_in_struct_ss" = "xyes" ; then
+	AC_DEFINE(HAVE_SS_FAMILY_IN_SS)
+fi
+
+AC_CACHE_CHECK([for __ss_family field in struct sockaddr_storage],
+		ac_cv_have___ss_family_in_struct_ss, [
+	AC_TRY_COMPILE(
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		],
+		[ struct sockaddr_storage s; s.__ss_family = 1; ],
+		[ ac_cv_have___ss_family_in_struct_ss="yes" ],
+		[ ac_cv_have___ss_family_in_struct_ss="no" ]
+	)
+])
+if test "x$ac_cv_have___ss_family_in_struct_ss" = "xyes" ; then
+	AC_DEFINE(HAVE___SS_FAMILY_IN_SS)
+fi
+
+AC_CACHE_CHECK([for si_value.sival_ptr], ac_cv_have_sival_ptr, [
+        AC_TRY_COMPILE(
+                [
+#include <signal.h>
+                ],
+                [ siginfo_t *info; info->si_value.sival_ptr = (siginfo_t *)0; ],
+                [ ac_cv_have_sival_ptr="yes" ],
+                [ ac_cv_have_sival_ptr="no" ]
+        )
+])
+if test "x$ac_cv_have_sival_ptr" = "xyes" ; then
+        AC_DEFINE(HAVE_SIVAL_PTR)
+fi
+
+AC_CACHE_CHECK([for si_value.sigval_ptr], ac_cv_have_sigval_ptr, [
+        AC_TRY_COMPILE(
+                [
+#include <signal.h>
+                ],
+                [ siginfo_t *info; info->si_value.sigval_ptr = NULL; ],
+                [ ac_cv_have_sigval_ptr="yes" ],
+                [ ac_cv_have_sigval_ptr="no" ]
+        )
+])
+if test "x$ac_cv_have_sigval_ptr" = "xyes" ; then
+        AC_DEFINE(HAVE_SIGVAL_PTR)
+fi
+
+AC_CACHE_CHECK([for pid_t], ac_cv_have_pid_t, [
+        AC_TRY_COMPILE(
+                [
+#include <sys/types.h>
+                ],
+                [ pid_t foo; foo = 1235; ],
+                [ ac_cv_have_pid_t="yes" ],
+                [ ac_cv_have_pid_t="no" ]
+        )
+])
+if test "x$ac_cv_have_pid_t" = "xyes" ; then
+        AC_DEFINE(HAVE_PID_T)
+fi
+
+AC_CACHE_CHECK([if libc defines __progname], ac_cv_libc_defines___progname, [
+	AC_TRY_LINK([], 
+		[ extern char *__progname; printf("%s", __progname); ], 
+		[ ac_cv_libc_defines___progname="yes" ],
+		[ ac_cv_libc_defines___progname="no" ]
+	)
+])
+if test "x$ac_cv_libc_defines___progname" = "xyes" ; then
+	AC_DEFINE(HAVE___PROGNAME)
+fi
+
+
+AC_CACHE_CHECK([if libc defines sys_errlist], ac_cv_libc_defines_sys_errlist, [
+	AC_TRY_LINK([], 
+		[ extern const char *const sys_errlist[]; printf("%s", sys_errlist[0]);], 
+		[ ac_cv_libc_defines_sys_errlist="yes" ],
+		[ ac_cv_libc_defines_sys_errlist="no" ]
+	)
+])
+if test "x$ac_cv_libc_defines_sys_errlist" = "xyes" ; then
+	AC_DEFINE(HAVE_SYS_ERRLIST)
+fi
+
+
+AC_CACHE_CHECK([if libc defines sys_nerr], ac_cv_libc_defines_sys_nerr, [
+	AC_TRY_LINK([], 
+		[ extern int sys_nerr; printf("%i", sys_nerr);], 
+		[ ac_cv_libc_defines_sys_nerr="yes" ],
+		[ ac_cv_libc_defines_sys_nerr="no" ]
+	)
+])
+if test "x$ac_cv_libc_defines_sys_nerr" = "xyes" ; then
+	AC_DEFINE(HAVE_SYS_NERR)
+fi
+
+piddir=/var/run
+AC_ARG_WITH(pid-dir,
+	[  --with-pid-dir=PATH     Specify location of wackamole.pid file],
+	[
+		if test "x$withval" != "xno" ; then	
+			piddir=$withval
+		fi
+	]
+)
+
+# make sure the directory exists
+if test ! -d $piddir ; then	
+	piddir=`eval echo ${sysconfdir}`
+	case $piddir in
+ 		NONE/*) piddir=`echo $piddir | sed "s~NONE~$ac_default_prefix~"` ;;
+	esac
+fi
+
+AC_DEFINE_UNQUOTED(_PATH_WACKAMOLE_PIDDIR, "$piddir")
+AC_SUBST(piddir)
+
+AC_EXEEXT
+
+case "$host" in
+*-*-linux*)
+	LDFLAGS="$LDFLAGS -rdynamic"
+	SHCC=$CC
+	SHCFLAGS="$CFLAGS -fPIC"
+        CPPFLAGS="$CPPFLAGS -DNEEDS_FORCE_REUP"
+	SHCPPFLAGS="$CPPFLAGS"
+	SHLD="$CC -shared"
+	SHLDFLAGS="$LDFLAGS"
+	SHLIBS=$LIBS
+	BUNDLEEXT=so
+	;;
+*-*-freebsd*)
+	LDFLAGS="$LDFLAGS -rdynamic"
+	SHCC=$CC
+	SHCFLAGS="$CFLAGS -fPIC"
+	SHCPPFLAGS="$CPPFLAGS"
+	SHLD="$CC -shared"
+	SHLDFLAGS="$LDFLAGS"
+	SHLIBS=$LIBS
+	BUNDLEEXT=so
+	;;
+*-*-solaris*)
+	LDFLAGS="$LDFLAGS "`echo $LDFLAGS | sed -e 's/-L/-R/g;'`
+	SHCC=$CC
+	SHCFLAGS="$CFLAGS -fPIC"
+	SHCPPFLAGS="$CPPFLAGS -DUSE_FATTACH"
+	SHLD="$CC -shared"
+	SHLDFLAGS="$LDFLAGS"
+	SHLIBS=$LIBS
+	BUNDLEEXT=so
+	;;
+*-*-darwin*)
+	LDFLAGS="$LDFLAGS -W,-pthread"
+	SHCC=$CC
+	SHCFLAGS="$CFLAGS -fPIC"
+	SHCPPFLAGS="$CPPFLAGS"
+	SHLD="$CC -dynamiclib"
+	SHLDFLAGS="$LDFLAGS"
+	SHLIBS=$LIBS	
+	BUNDLEEXT=bundle
+        AC_DEFINE(NEED_SYMBOL_PREFIX)
+        ;;
+esac
+
+AC_SUBST(SHCC)
+AC_SUBST(SHCFLAGS)
+AC_SUBST(SHCPPFLAGS)
+AC_SUBST(SHLD)
+AC_SUBST(SHLDFLAGS)
+AC_SUBST(SHLIBS)
+AC_SUBST(BUNDLEEXT)
+AC_SUBST(IFE_OBJ)
+
+AC_OUTPUT(Makefile)
+
+# Print summary of options
+
+# Someone please show me a better way :)
+A=`eval echo ${prefix}` ; A=`eval echo ${A}`
+B=`eval echo ${bindir}` ; B=`eval echo ${B}`
+C=`eval echo ${sbindir}` ; C=`eval echo ${C}`
+D=`eval echo ${sysconfdir}` ; D=`eval echo ${D}`
+E=`eval echo ${libdir}` ; E=`eval echo ${E}`
+F=`eval echo ${mandir}/${mansubdir}X` ; F=`eval echo ${F}`
+G=`eval echo ${piddir}` ; G=`eval echo ${G}`
+H=`eval echo ${EMBED_PERL}` ; H=`eval echo ${H}`
+
+echo ""
+echo "Wackamole has been configured with the following options:"
+echo "                    User binaries: $B"
+echo "                  System binaries: $C"
+echo "              Configuration files: $D"
+echo "                   User libraries: $E"
+echo "                     Manual pages: $F"
+echo "                     PID file dir: $G"
+echo "           Embed perl interpreter: $H"
+echo "                   Manpage format: $MANTYPE"
+
+echo ""
+
+echo "              Host: ${host}"
+echo "          Compiler: ${CC}"
+echo "    Compiler flags: ${CFLAGS}"
+echo "Preprocessor flags: ${CPPFLAGS}"
+echo "      Linker flags: ${LDFLAGS}"
+echo "         Libraries: ${LIBS}"
+echo "   ife packet code: ${IFE_OBJ}"
+
+echo ""
+
+case "$host" in
+*-*-freebsd*)
+if test $EC_USE_THREADS != -1; then
+echo ""
+echo "  *************************** WARNING *******************************"
+echo "  FreeBSD threading has shown to cause serious problems in wackamole."
+echo "  It appears that you have threading enabled.  This is highly"
+echo "  experimental.  Please consider disabling threading entirely by"
+echo "  rerunning configure with the --with-threads=no option."
+echo "  *******************************************************************"
+echo ""
+fi
+;;
+esac

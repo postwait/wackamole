@@ -1,0 +1,297 @@
+/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+/* $Id: config.h.in,v 1.8 2005-03-30 19:56:58 jesus Exp $ */
+
+#ifndef _CONFIG_H
+#define _CONFIG_H
+
+/* Generated automatically from acconfig.h by autoheader. */
+/* Please make your changes there */
+
+
+/* Define if you have the strftime function.  */
+#undef HAVE_STRFTIME
+
+/* Define as __inline if that's what the C compiler calls it.  */
+#undef inline
+
+/* Define if your processor stores words with the most significant
+   byte first (like Motorola and SPARC, unlike Intel and VAX).  */
+#undef WORDS_BIGENDIAN
+
+/* Define if your system's struct sockaddr_un has a sun_len member */
+#undef HAVE_SUN_LEN_IN_SOCKADDR_UN
+
+/* Define if your system defines sys_errlist[] */
+#undef HAVE_SYS_ERRLIST
+
+/* Define if your system defines sys_nerr */
+#undef HAVE_SYS_NERR
+
+/* Define if your snprintf is busted */
+#undef BROKEN_SNPRINTF
+
+/* struct timeval */
+#undef HAVE_STRUCT_TIMEVAL
+
+/* Define if libc defines __progname */
+#undef HAVE___PROGNAME
+
+/* Data types */
+#undef ARCH_SCATTER_NONE
+#undef ARCH_SCATTER_CONTROL
+#undef ARCH_SCATTER_ACCRIGHTS
+#undef HAVE_SOCKOPT_LEN_T
+#undef HAVE_STRUCT_TIMEZONE
+#undef HAVE_U_INT
+#undef HAVE_INTXX_T
+#undef HAVE_U_INTXX_T
+#undef HAVE_UINTXX_T
+#undef HAVE_INT64_T
+#undef HAVE_U_INT64_T
+#undef HAVE_SOCKLEN_T
+#undef HAVE_SIZE_T
+#undef HAVE_SSIZE_T
+#undef HAVE_CLOCK_T
+#undef HAVE_MODE_T
+#undef HAVE_PID_T
+#undef HAVE_SA_FAMILY_T
+#undef HAVE_STRUCT_SOCKADDR_STORAGE
+#undef HAVE_STRUCT_ADDRINFO
+#undef HAVE_STRUCT_IN6_ADDR
+#undef HAVE_STRUCT_SOCKADDR_IN6
+#undef HAVE_SIVAL_PTR
+#undef HAVE_SIGVAL_PTR
+
+/* Fields in struct sockaddr_storage */
+#undef HAVE_SS_FAMILY_IN_SS
+#undef HAVE___SS_FAMILY_IN_SS
+
+/* Specify location of ecelerity.pid */
+#undef _PATH_ECELERITY_PIDDIR
+
+/* The number of bytes in a char.  */
+#undef SIZEOF_CHAR
+
+/* The number of bytes in a int.  */
+#undef SIZEOF_INT
+
+/* The number of bytes in a long int.  */
+#undef SIZEOF_LONG_INT
+
+/* The number of bytes in a long long int.  */
+#undef SIZEOF_LONG_LONG_INT
+
+/* The number of bytes in a short int.  */
+#undef SIZEOF_SHORT_INT
+
+/* Define if you have the bcopy function.  */
+#undef HAVE_BCOPY
+
+/* Define if you have the gettimeofday function.  */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define if you have the inet_aton function.  */
+#undef HAVE_INET_ATON
+
+/* Define if you have the inet_ntoa function.  */
+#undef HAVE_INET_NTOA
+
+/* Define if you have the inet_ntop function.  */
+#undef HAVE_INET_NTOP
+
+/* Define if you have the lrand48 function.  */
+#undef HAVE_LRAND48
+
+/* Define if you have the memmove function.  */
+#undef HAVE_MEMMOVE
+
+/* Define if you have the setsid function.  */
+#undef HAVE_SETSID
+
+/* Define if you have the snprintf function.  */
+#undef HAVE_SNPRINTF
+
+/* Define if you have the strerror function.  */
+#undef HAVE_STRERROR
+
+/* Define if you have the time function.  */
+#undef HAVE_TIME
+
+/* Define if you have the <fcntl.h> header file. */
+#undef HAVE_FCNTL_H
+
+/* Define if you have the <sys/ioctl.h> header file.  */
+#undef HAVE_SYS_IOCTL_H
+
+/* Define if you have the <net/if.h> header file.  */
+#undef HAVE_NET_IF_H
+
+/* Define if you have the <net/route.h> header file.  */
+#undef HAVE_NET_ROUTE_H
+
+/* Define if you have the <arpa/inet.h> header file.  */
+#undef HAVE_ARPA_INET_H
+
+/* Define if you have the <assert.h> header file.  */
+#undef HAVE_ASSERT_H
+
+/* Define if you have the <errno.h> header file.  */
+#undef HAVE_ERRNO_H
+
+/* Define if you have the <grp.h> header file.  */
+#undef HAVE_GRP_H
+
+/* Define if you have the <limits.h> header file.  */
+#undef HAVE_LIMITS_H
+
+/* Define if you have the <syslog.h> header file.  */
+#undef HAVE_SYSLOG_H
+
+/* Define if you have the <sys/resource.h> header file.  */
+#undef HAVE_SYS_RESOURCE_H
+
+/* Define if you have the <netdb.h> header file.  */
+#undef HAVE_NETDB_H
+
+/* Define if you have the <pcap.h> header file.  */
+#undef HAVE_PCAP_H
+
+/* Define if you have the <netinet/if_ether.h> header file.  */
+#undef HAVE_NETINET_IF_ETHER_H
+
+/* Define if you have the <net/if_types.h> header file.  */
+#undef HAVE_NET_IF_TYPES_H
+
+/* Define if you have the <net/if_dl.h> header file.  */
+#undef HAVE_NET_IF_DL_H
+
+/* Define if you have the <netinet/in.h> header file.  */
+#undef HAVE_NETINET_IN_H
+
+/* Define if you have the <netinet/tcp.h> header file.  */
+#undef HAVE_NETINET_TCP_H
+
+/* Define if you have the <pthread.h> header file.  */
+#undef HAVE_PTHREAD_H
+
+/* Define if you have the <pwd.h> header file.  */
+#undef HAVE_PWD_H
+
+/* Define if you have the <signal.h> header file.  */
+#undef HAVE_SIGNAL_H
+
+/* Define if you have the <stdarg.h> header file.  */
+#undef HAVE_STDARG_H
+
+/* Define if you have the <stdint.h> header file.  */
+#undef HAVE_STDINT_H
+
+/* Define if you have the <stdio.h> header file.  */
+#undef HAVE_STDIO_H
+
+/* Define if you have the <stdlib.h> header file.  */
+#undef HAVE_STDLIB_H
+
+/* Define if you have the <string.h> header file.  */
+#undef HAVE_STRING_H
+
+/* Define if you habe the <ctype.h> header file.  */
+#undef HAVE_CTYPE_H
+
+/* Define if you have the <sys/inttypes.h> header file.  */
+#undef HAVE_SYS_INTTYPES_H
+
+/* Define if you have the <sys/ioctl.h> header file.  */
+#undef HAVE_SYS_IOCTL_H
+
+/* Define if you have the <sys/param.h> header file.  */
+#undef HAVE_SYS_PARAM_H
+
+/* Define if you have the <sys/socket.h> header file.  */
+#undef HAVE_SYS_SOCKET_H
+
+/* Define if you have the <sys/dlpi.h> header file.  */
+#undef HAVE_SYS_DLPI_H
+
+/* Define if you have the <net/bpf.h> header file.  */
+#undef HAVE_NET_BPF_H
+
+/* Define if you have the <sys/sockio.h> header file.  */
+#undef HAVE_SYS_SOCKIO_H
+
+/* Define if you have the <stropts.h> header file.  */
+#undef HAVE_STROPTS_H
+
+/* Define if you have the <sys/stat.h> header file.  */
+#undef HAVE_SYS_STAT_H
+
+/* Define if you have the <sys/time.h> header file.  */
+#undef HAVE_SYS_TIME_H
+
+/* Define if you have the <sys/timeb.h> header file.  */
+#undef HAVE_SYS_TIMEB_H
+
+/* Define if you have the <sys/types.h> header file.  */
+#undef HAVE_SYS_TYPES_H
+
+/* Define if you have the <sys/wait.h> header file.  */
+#undef HAVE_SYS_WAIT_H
+
+/* Define if you have the <sys/uio.h> header file.  */
+#undef HAVE_SYS_UIO_H
+
+/* Define if you have the <sys/un.h> header file.  */
+#undef HAVE_SYS_UN_H
+
+/* Define if you have the <sys/sysctl.h> header file.  */
+#undef HAVE_SYS_SYSCTL_H
+
+/* Define if you have the <time.h> header file.  */
+#undef HAVE_TIME_H
+
+/* Define if you have the <unistd.h> header file.  */
+#undef HAVE_UNISTD_H
+
+/* Define if you have the <sys/filio.h> header file.  */
+#undef HAVE_SYS_FILIO_H
+
+/* Define if you have the <dlfcn.h> header file.  */
+#undef HAVE_DLFCN_H
+
+/* Define if you have the <sp.h> header file.  */
+#undef HAVE_SP_H
+
+/* Define if you have the <strings.h> header file.  */
+#undef HAVE_STRINGS_H
+
+/* Define if you have the nsl library (-lnsl).  */
+#undef HAVE_LIBNSL
+
+/* Define if you have the posix4 library (-lposix4).  */
+#undef HAVE_LIBPOSIX4
+
+/* Define if you have the pthread library (-lpthread).  */
+#undef HAVE_LIBPTHREAD
+
+/* Define if you have the socket library (-lsocket).  */
+#undef HAVE_LIBSOCKET
+
+/* Define if you have the thread library (-lthread).  */
+#undef HAVE_LIBTHREAD
+
+#undef HAVE_LIBDL
+
+#undef HAVE_LIBTSP
+
+#undef HAVE_PROC_NET_ARP
+#undef USE_SOCK_PACKET
+#undef USE_BPF
+#undef USE_DLPI
+#undef USE_EMBEDDED_PERL
+
+#undef NEED_SYMBOL_PREFIX
+/* ******************* Shouldn't need to edit below this line ************** */
+
+#include "defines.h"
+
+#endif /* _CONFIG_H */

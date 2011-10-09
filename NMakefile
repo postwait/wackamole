@@ -1,0 +1,61 @@
+
+# path to your winpcap developers kit
+WPDPACK=..\WpdPack
+
+# path to your spread developers kit
+SPREAD=..\spread-bin-3.17.3
+
+LEX=flex
+YACC=bison -y
+
+ETCDIR=/opt/wackamole/etc
+PIDDIR=/opt/wackamole/var/run/
+
+# no user config below this point
+
+CC=$(CC) /nologo
+
+LIBS=$(SPREAD)\win\libtspread.lib $(WPDPACK)\Lib\wpcap.lib ws2_32.lib kernel32.lib user32.lib advapi32.lib iphlpapi.lib mprapi.lib
+CFLAGS=/MT -DETCDIR="\"$(ETCDIR)\"" -I$(SPREAD)\include -I$(WPDPACK)\Include -D_PATH_WACKAMOLE_PIDDIR="\"$(PIDDIR)\"" -DHAVE_CONFIG_H=1
+
+TARGETS=wackamole.exe wackatrl.exe ife.exe
+
+WACKOBJS=wackamole.obj alarm.obj lex.wack.obj y.tab.obj arpcache.obj spoofmanager.obj \
+	abt.obj control.obj apue.obj configuration.obj userloader.obj ife-win32.obj \
+	ife-icmp-support.obj win32.obj getopt_long.obj
+
+WACKATRLOBJS=wackatrl.obj alarm.obj lex.wack.obj y.tab.obj apue.obj \
+	configuration.obj userloader.obj win32.obj getopt_long.obj
+
+IFEOBJS=ife.obj ife-win32.obj arpcache.obj abt.obj alarm.obj ife-icmp-support.obj
+
+CONFIGFILES=config.h defines.h
+
+all: $(CONFIGFILES) $(TARGETS)
+
+parser: lex.wack.c y.tab.c y.tab.h
+
+$(WACKOBJS): config.h
+
+$(WACKATRLOBJS): config.h
+
+config.h:	config.w32.h
+	copy /y config.w32.h config.h
+
+lex.wack.c: config_gram.l y.tab.h
+	$(LEX) -Pwack config_gram.l
+
+y.tab.c y.tab.h: config_gram.y
+	$(YACC) -p wack -d config_gram.y
+
+wackamole.exe: $(WACKOBJS)
+	$(CC) -o wackamole.exe $(WACKOBJS) $(LIBS)
+
+wackatrl.exe: $(WACKATRLOBJS)
+	$(CC) -o wackatrl.exe $(WACKATRLOBJS) $(LIBS)
+
+ife.exe: $(IFEOBJS)
+	$(CC) -o ife.exe $(IFEOBJS) $(LIBS)
+
+clean:
+	-del /q *.obj *.exe *.exp *.lib

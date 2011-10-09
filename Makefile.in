@@ -1,0 +1,156 @@
+.SUFFIXES: .lo
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+sbindir=@sbindir@
+libdir=@libdir@
+mandir=@mandir@
+mansubdir=@mansubdir@
+sysconfdir=@sysconfdir@
+piddir=@piddir@
+srcdir=@srcdir@
+top_srcdir=@top_srcdir@
+
+DESTDIR=
+VPATH=@srcdir@
+WACKAMOLE_PROGRAM=@sbindir@/wackamole
+
+PATHS= -DETCDIR=\"$(sysconfdir)\" \
+       -D_PATH_WACKAMOLE_PIDDIR=\"$(piddir)\" \
+       -DBUNDLEEXT=\"$(BUNDLEEXT)\"
+
+CC=@CC@
+CFLAGS=@CFLAGS@
+LEX=@LEX@
+YACC=@YACC@
+CPPFLAGS=-I. -I$(srcdir) @CPPFLAGS@ $(PATHS) @DEFS@
+LD=@LD@
+LDFLAGS=@LDFLAGS@
+LIBS=@LIBS@
+AR=@AR@
+SHCC=@SHCC@
+SHLD=@SHLD@
+SHCFLAGS=@SHCFLAGS@
+SHCPPFLAGS=@SHCPPFLAGS@
+SHLDFLAGS=@SHLDFLAGS@
+SHLIBS=@SHLIBS@
+BUNDLEEXT=@BUNDLEEXT@
+RANLIB=@RANLIB@
+INSTALL=@INSTALL@
+SOFTLINK=@LN_S@
+PERL=@PERL@
+ENT=@ENT@
+
+
+TARGETS=wackamole wackatrl t/arptest
+
+WACKOBJS=wackamole.o alarm.o lex.wack.o y.tab.o arpcache.o spoofmanager.o \
+	abt.o control.o apue.o configuration.o userloader.o @IFE_OBJ@ \
+	ife-icmp-support.o @PERLOBJS@
+
+WACKATRLOBJS=wackatrl.o alarm.o lex.wack.o y.tab.o apue.o \
+	configuration.o userloader.o @PERLOBJS@
+
+PATHSUBS	= \
+	-D/etc/wackamole.conf=$(sysconfdir)/wackamole.conf \
+        -D/var/run/wackamole.pid=$(piddir)/wackamole.pid
+
+FIXPATHSCMD	= $(PERL) $(srcdir)/fixpaths $(PATHSUBS)
+
+all: $(CONFIGFILES) $(TARGETS)
+
+parser: lex.wack.c y.tab.c y.tab.h
+
+$(WACKOBJS): config.h
+
+$(WACKATRLOBJS): config.h
+
+.c.o:	defines.h config.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
+
+.c.lo:	defines.h config.h
+	$(SHCC) $(SHCFLAGS) $(SHCPPFLAGS) -c $< -o $*.lo
+
+lex.wack.c:	config_gram.l
+	$(LEX) -Pwack config_gram.l
+y.tab.c y.tab.h:	config_gram.y
+	$(YACC) -p wack -d config_gram.y
+lex.wack.o:	lex.wack.c y.tab.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c lex.wack.c
+y.tab.o:	y.tab.c config.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c y.tab.c
+perlxsi.c:
+	$(PERL) -MExtUtils::Embed -e xsinit -- -o perlxsi.c
+
+none:	
+	echo "Skipping shared library creation."
+
+install-none:
+	echo "Skipping shared library installation."
+
+wackamole: $(WACKOBJS)
+	$(LD) -o $@ $(WACKOBJS) $(LDFLAGS) $(LIBS)
+
+wackatrl: $(WACKATRLOBJS)
+	$(LD) -o $@ $(WACKATRLOBJS) $(LDFLAGS) $(LIBS)
+
+ife:	ife.o ife-icmp-support.o arpcache.o abt.o alarm.o @IFE_OBJ@
+	$(LD) -o $@ ife.o ife-icmp-support.o arpcache.o abt.o alarm.o @IFE_OBJ@ $(LDFLAGS) $(LIBS)
+
+arptest.o:	t/arptest.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c t/arptest.c
+
+t/arptest:	arptest.o alarm.o arpcache.o abt.o
+	$(LD) -o $@ arptest.o alarm.o arpcache.o abt.o $(LDFLAGS) $(LIBS)
+
+clean:
+	rm -f *.lo *.tlo *.to *.o *.a $(TARGETS) *.so ife
+	rm -f config.cache config.log *.out core *~
+
+distclean: clean parserclean
+	rm -f Makefile config.h config.status *~
+
+parserclean:
+	rm -f lex.wack.c y.tab.c y.tab.h
+
+mrproper: distclean
+
+veryclean: distclean
+	rm -f configure config.h.in *.0
+
+distprep:
+	autoreconf
+
+install: $(TARGETS) install-files
+
+install-files:
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(bindir)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(sbindir)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)/$(mansubdir)5
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(mandir)/$(mansubdir)8
+	$(srcdir)/mkinstalldirs $(DESTDIR)$(libdir)
+	$(INSTALL) -m 0755 -s wackamole $(DESTDIR)$(sbindir)/wackamole
+	$(INSTALL) -m 0755 -s wackatrl $(DESTDIR)$(sbindir)/wackatrl
+	$(INSTALL) -m 0644 wackamole.8 $(DESTDIR)$(mandir)/$(mansubdir)8/wackamole.8
+	$(INSTALL) -m 0644 wackatrl.8 $(DESTDIR)$(mandir)/$(mansubdir)8/wackatrl.8
+	$(INSTALL) -m 0644 wackamole.conf.5 $(DESTDIR)$(mandir)/$(mansubdir)5/wackamole.conf.5
+	if [ ! -d $(DESTDIR)$(sysconfdir) ]; then \
+		$(srcdir)/mkinstalldirs $(DESTDIR)$(sysconfdir); \
+	fi
+	$(INSTALL) -m 644 wackamole.conf $(DESTDIR)$(sysconfdir)/wackamole.conf.sample
+
+uninstallall:	uninstall
+	-rm -f $(DESTDIR)$(sysconfdir)/wackamole.conf.sample
+	-rmdir $(DESTDIR)$(sysconfdir)
+	-rmdir $(DESTDIR)$(bindir)
+	-rmdir $(DESTDIR)$(sbindir)
+	-rmdir $(DESTDIR)$(mandir)/$(mansubdir)8
+	-rmdir $(DESTDIR)$(mandir)/$(mansubdir)8
+	-rmdir $(DESTDIR)$(mandir)
+	-rmdir $(DESTDIR)$(libdir)
+
+uninstall: 
+	-rm -f $(DESTDIR)$(sbindir)/wackamole
+	-rm -f $(DESTDIR)$(sbindir)/wackatrl
